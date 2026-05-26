@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZZZ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Bebas+Neue&family=Special+Elite&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #000;
+  overflow: hidden;
+  cursor: none;
+}
+
+/* ── scanlines CRT / xero ── */
+#scanlines {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 8;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px, transparent 3px,
+    rgba(0,0,0,0.13) 3px, rgba(0,0,0,0.13) 4px
+  );
+}
+
+/* ── hachures diagonales permanentes (fond) ── */
+#hatch {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 1;
+  opacity: 0.028;
+  background: repeating-linear-gradient(
+    -48deg,
+    rgba(214,208,194,1) 0, rgba(214,208,194,1) 0.5px,
+    transparent 0.5px, transparent 6px
+  );
+}
+
+/* ── curseur ── */
+#cursor {
+  position: fixed;
+  width: 2px; height: 2px;
+  border-radius: 50%;
+  background: rgba(224,215,196,0.80);
+  transform: translate(-50%,-50%);
+  pointer-events: none;
+  z-index: 9999;
+  top: -50px; left: -50px;
+  box-shadow: 0 0 6px rgba(255,230,170,0.55);
+}
+
+/* ── flash d'ignition sur contact Z ── */
+#z-flash {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 4;
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+
+@keyframes zIgnite {
+  0%   { filter: url(#paper-z) brightness(1.00); }
+  18%  { filter: url(#paper-z) brightness(1.28); }
+  55%  { filter: url(#paper-z) brightness(1.12); }
+  100% { filter: url(#paper-z) brightness(1.00); }
+}
+.z-glyph.igniting {
+  animation: zIgnite 1.4s cubic-bezier(0.16,0.84,0.44,1) forwards;
+}
+
+/* ── voile sombre : couvre tout, trou au curseur = bougie ── */
+#dark-veil {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 3;
+  background: radial-gradient(circle at -2000px -2000px,
+    transparent 0px,
+    rgba(0,0,0,0.92) 1px);
+}
+
+/* ── halo warm amber au-dessus de tout (screen additif = lumière chaude) ── */
+#torch {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 9;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle at -2000px -2000px,
+    rgba(255,218,140,0.38) 0px,
+    rgba(255,200,110,0.20) 70px,
+    rgba(220,165,80,0.08)  160px,
+    transparent 280px);
+}
+
+/*
+  ══════════════════════════════════════════
+  SCREENS
+  RÈGLE DE SPÉCIFICITÉ : uniquement .screen + .screen.active
+  pour display. Jamais de display: flex sur un ID de screen
+  (l'ID aurait spécificité 1,0,0 > 0,1,0 et ignorerait display:none)
+  ══════════════════════════════════════════
+*/
+.screen {
+  position: fixed; inset: 0;
+  background: #000;
+  display: none;           /* caché par défaut */
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+.screen.active {
+  display: block;          /* affiché quand actif */
+  opacity: 1;
+}
+/* Les écrans nécessitant un layout spécial utilisent
+   un wrapper interne positionné en absolu */
+
+/* ══════════════════════════════
+   HOME
+══════════════════════════════ */
+#screen-home { overflow: hidden; }
+
+#grain-canvas {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 1;
+  opacity: 0.92;
+}
+
+/* ══════════════════════════════
+   FUMÉE / BRUME DE FOND
+══════════════════════════════ */
+#smoke {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 1;
+  overflow: hidden;
+}
+.smk {
+  position: absolute;
+  border-radius: 50%;
+}
+
+@keyframes smkA {
+  0%,100% { transform: translate(0,0) scale(1); }
+  28%     { transform: translate(5%,3%) scale(1.07); }
+  62%     { transform: translate(-3%,6%) scale(0.94); }
+}
+@keyframes smkB {
+  0%,100% { transform: translate(0,0) scale(1); }
+  35%     { transform: translate(-6%,-4%) scale(1.10); }
+  68%     { transform: translate(4%,-5%) scale(0.92); }
+}
+@keyframes smkFade {
+  0%,100% { opacity: 0.55; }
+  50%     { opacity: 1; }
+}
+
+.smk1 {
+  width:72vw; height:72vw; top:-22%; left:-32%;
+  background: radial-gradient(circle, rgba(148,134,114,0.24) 0%, rgba(58,50,40,0.07) 55%, transparent 72%);
+  filter: blur(68px);
+  animation: smkA 38s ease-in-out infinite, smkFade 22s ease-in-out infinite;
+  animation-delay: -4s, -9s;
+}
+.smk2 {
+  width:58vw; height:58vw; top:28%; left:38%;
+  background: radial-gradient(circle, rgba(130,118,100,0.20) 0%, rgba(50,44,36,0.06) 55%, transparent 70%);
+  filter: blur(55px);
+  animation: smkB 44s ease-in-out infinite, smkFade 28s ease-in-out infinite;
+  animation-delay: -14s, -3s;
+}
+.smk3 {
+  width:48vw; height:48vw; top:58%; left:8%;
+  background: radial-gradient(circle, rgba(140,126,106,0.22) 0%, rgba(55,48,38,0.07) 55%, transparent 70%);
+  filter: blur(60px);
+  animation: smkA 52s ease-in-out infinite, smkFade 18s ease-in-out infinite;
+  animation-delay: -22s, -6s;
+}
+.smk4 {
+  width:62vw; height:62vw; top:12%; left:52%;
+  background: radial-gradient(circle, rgba(120,108,92,0.18) 0%, rgba(46,40,32,0.05) 55%, transparent 70%);
+  filter: blur(78px);
+  animation: smkB 40s ease-in-out infinite, smkFade 32s ease-in-out infinite;
+  animation-delay: -18s, -15s;
+}
+.smk5 {
+  width:38vw; height:38vw; top:42%; left:68%;
+  background: radial-gradient(circle, rgba(158,144,124,0.16) 0%, transparent 66%);
+  filter: blur(48px);
+  animation: smkA 32s ease-in-out infinite, smkFade 20s ease-in-out infinite;
+  animation-delay: -8s, -20s;
+}
+.smk6 {
+  width:52vw; height:52vw; top:68%; left:25%;
+  background: radial-gradient(circle, rgba(134,122,104,0.20) 0%, transparent 65%);
+  filter: blur(62px);
+  animation: smkB 48s ease-in-out infinite, smkFade 25s ease-in-out infinite;
+  animation-delay: -30s, -5s;
+}
+.smk7 {
+  width:44vw; height:44vw; top:2%; left:58%;
+  background: radial-gradient(circle, rgba(144,130,110,0.18) 0%, transparent 66%);
+  filter: blur(52px);
+  animation: smkA 42s ease-in-out infinite, smkFade 30s ease-in-out infinite;
+  animation-delay: -36s, -12s;
+}
+
+/*
+  #zzz-row : ancré en bas-gauche.
+  inline-block + vertical-align:bottom = alignement parfait
+  sans dépendre de la hauteur d'un flex-container.
+*/
+#zzz-row {
+  position: absolute;
+  bottom: 3vh; left: 0;
+  z-index: 2;
+  white-space: nowrap;
+  line-height: 0.82;
+  overflow: visible;
+}
+
+.z-unit {
+  display: inline-block;
+  vertical-align: bottom;
+  position: relative;
+  cursor: none;
+  /* pas de pointer-events sur z4/z5 */
+}
+.z4, .z5 { pointer-events: none; }
+
+.z-glyph {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-weight: 400;
+  display: block;
+  letter-spacing: -0.02em;
+  user-select: none;
+
+  /* face sombre — relief lisible, révélée par la torche */
+  color: rgba(55,48,38,0.95);
+  transition: color 0.5s ease, text-shadow 0.5s ease;
+
+  /* filtre papier — déplace + adoucit les contours */
+  filter: url(#paper-z);
+
+  /* ── EXTRUSION 3D ── flancs toujours plus sombres que la face ── */
+  text-shadow:
+    /* arête haute-gauche : micro-reflet froid */
+    -1px -1px 0 rgba(70,60,45,0.12),
+    /* 20 couches — démarrent à rgba(18,15,11), saut de 37 vs face */
+     1px  2px 0 rgba(18,15,11,1),
+     2px  3px 0 rgba(16,14,10,1),
+     3px  5px 0 rgba(15,12, 9,1),
+     4px  6px 0 rgba(13,11, 8,1),
+     5px  8px 0 rgba(12,10, 7,1),
+     6px  9px 0 rgba(11, 9, 7,1),
+     7px 11px 0 rgba(10, 8, 6,1),
+     8px 12px 0 rgba( 9, 7, 5,1),
+     9px 14px 0 rgba( 8, 7, 5,1),
+    10px 15px 0 rgba( 7, 6, 4,1),
+    11px 17px 0 rgba( 7, 5, 4,1),
+    12px 18px 0 rgba( 6, 5, 3,1),
+    13px 20px 0 rgba( 5, 4, 3,1),
+    14px 21px 0 rgba( 5, 4, 3,1),
+    15px 23px 0 rgba( 4, 3, 2,1),
+    16px 24px 0 rgba( 4, 3, 2,1),
+    17px 26px 0 rgba( 3, 3, 2,1),
+    18px 27px 0 rgba( 3, 2, 2,1),
+    19px 29px 0 rgba( 3, 2, 1,1),
+    20px 30px 0 rgba( 2, 2, 1,1),
+    22px 34px 28px rgba(0,0,0,0.75),
+    22px 34px 55px rgba(0,0,0,0.45);
+
+  transform: skewX(-10deg);
+  transform-origin: center bottom;
+
+  opacity: 0;
+}
+
+/* face illuminée — saut clair depuis rgba(55,48,38) */
+.z-unit.illuminated .z-glyph {
+  color: rgba(105,90,66,0.95);
+  text-shadow:
+    /* arête éclairée */
+    -2px -2px 0 rgba(165,145,105,0.22),
+    /* extrusion identique — flancs restent sombres = fort relief */
+     1px  2px 0 rgba(42,37,29,1),
+     2px  3px 0 rgba(40,35,28,1),
+     3px  5px 0 rgba(38,33,26,1),
+     4px  6px 0 rgba(36,31,24,1),
+     5px  8px 0 rgba(33,29,22,1),
+     6px  9px 0 rgba(31,27,21,1),
+     7px 11px 0 rgba(28,25,19,1),
+     8px 12px 0 rgba(26,22,17,1),
+     9px 14px 0 rgba(23,20,15,1),
+    10px 15px 0 rgba(21,18,14,1),
+    11px 17px 0 rgba(19,16,12,1),
+    12px 18px 0 rgba(17,15,11,1),
+    13px 20px 0 rgba(15,13, 9,1),
+    14px 21px 0 rgba(13,11, 8,1),
+    15px 23px 0 rgba(11, 9, 7,1),
+    16px 24px 0 rgba( 9, 8, 6,1),
+    17px 26px 0 rgba( 8, 7, 5,1),
+    18px 27px 0 rgba( 7, 6, 4,1),
+    19px 29px 0 rgba( 6, 5, 3,1),
+    20px 30px 0 rgba( 5, 4, 3,1),
+    22px 34px 28px rgba(0,0,0,0.70),
+    /* halo chaud sur la face uniquement */
+     0    0  20px rgba(210,165, 90,0.18),
+     0    0  55px rgba(200,148, 70,0.08);
+}
+
+/* tailles — envahissent le cadre sans dépasser la hauteur viewport */
+.z1 { margin-left: -0.14em; }
+.z1 .z-glyph { font-size: clamp(340px, 52vw, 720px); }
+
+.z2 .z-glyph { font-size: clamp(264px, 41vw, 565px); }
+
+.z3 .z-glyph { font-size: clamp(200px, 31vw, 430px); }
+
+.z4 .z-glyph { font-size: clamp(128px, 20vw, 272px); }
+
+.z5 .z-glyph { font-size: clamp(78px,  12vw, 165px); }
+
+/* labels statiques cachés — remplacés par #z-label-float */
+.z-label { display: none; }
+
+/* label flottant unique — positionné via JS au-dessus du Z actif */
+#z-label-float {
+  position: fixed;
+  pointer-events: none;
+  z-index: 50;
+  font-family: 'Special Elite', monospace;
+  font-size: 10px; letter-spacing: 0.40em;
+  text-transform: uppercase;
+  color: rgba(214,208,194,0.82);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-50%) translateY(5px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+#z-label-float.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0px);
+}
+#z-label-float::after {
+  content: '';
+  display: block;
+  width: 18px; height: 0.5px;
+  background: rgba(214,208,194,0.20);
+  margin: 5px auto 0;
+}
+
+/* ══════════════════════════════
+   BACK BUTTON — partagé
+══════════════════════════════ */
+.back-btn {
+  position: absolute; top: 22px; left: 24px; z-index: 5;
+  font-family: 'Special Elite', monospace;
+  font-size: 7px; letter-spacing: 0.46em; text-transform: uppercase;
+  color: rgba(214,208,194,0.18); background: none; border: none;
+  cursor: none; padding: 0;
+  transition: color 0.35s, letter-spacing 0.35s;
+}
+.back-btn:hover { color: rgba(214,208,194,0.65); letter-spacing: 0.56em; }
+
+/* ══════════════════════════════
+   ANNÉES
+══════════════════════════════ */
+#screen-years { z-index: 10; }
+
+#years-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.78; }
+
+.years-inner {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  padding: 0 9vw 0 9vw;
+}
+
+.year-item {
+  cursor: none; padding: 1.7vh 0;
+  border-bottom: 0.5px solid rgba(214,208,194,0.05);
+  display: flex; align-items: baseline; gap: 3vw;
+  position: relative; overflow: hidden;
+}
+.year-item:first-child { border-top: 0.5px solid rgba(214,208,194,0.05); }
+
+.year-item::after {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: rgba(218,195,148,0.06);
+  transition: width 0.5s cubic-bezier(0.23,1,0.32,1);
+}
+.year-item:hover::after { width: 100%; }
+
+.year-num {
+  font-family: 'Special Elite', monospace;
+  font-size: 7px; letter-spacing: 0.25em;
+  color: rgba(214,208,194,0.14);
+  min-width: 22px; flex-shrink: 0;
+  position: relative; z-index: 1;
+}
+.year-text {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: clamp(36px, 6.2vw, 78px);
+  letter-spacing: 0.03em; line-height: 1;
+  color: rgba(214,208,194,0.06);
+  -webkit-text-stroke: 0.5px rgba(214,208,194,0.20);
+  transition: color 0.45s, -webkit-text-stroke 0.45s, letter-spacing 0.45s;
+  position: relative; z-index: 1;
+}
+.year-item:hover .year-text {
+  color: rgba(230,218,195,0.96);
+  -webkit-text-stroke: 0px;
+  letter-spacing: 0.07em;
+  text-shadow:
+    0 0 22px rgba(218,195,148,0.45),
+    0 0 55px rgba(218,195,148,0.18);
+}
+.year-count {
+  font-family: 'Special Elite', monospace;
+  font-size: 7px; letter-spacing: 0.22em;
+  color: rgba(214,208,194,0.08);
+  margin-left: auto;
+  transition: color 0.35s;
+  position: relative; z-index: 1;
+}
+.year-item:hover .year-num   { color: rgba(214,208,194,0.55); }
+.year-item:hover .year-count { color: rgba(214,208,194,0.42); }
+
+/* ══════════════════════════════
+   PHOTOS
+══════════════════════════════ */
+#screen-photos { z-index: 10; overflow: hidden; }
+
+#photos-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.78; }
+
+.strip-outer { position: absolute; inset: 0; z-index: 2; overflow: hidden; }
+.strip-inner {
+  display: flex; height: 100%;
+  transition: transform 0.9s cubic-bezier(0.23,1,0.32,1);
+  will-change: transform;
+}
+.photo-card {
+  width: 100vw; height: 100vh;
+  flex-shrink: 0; position: relative; cursor: none;
+}
+canvas.px-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
+}
+.reveal-veil {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  background: rgba(0,0,0,0.74);
+  transition: opacity 1.9s cubic-bezier(0.23,1,0.32,1);
+  z-index: 2;
+}
+.reveal-veil.revealed { opacity: 0; pointer-events: none; }
+.reveal-txt {
+  font-family: 'Special Elite', monospace;
+  font-size: 7px; letter-spacing: 0.52em; text-transform: uppercase;
+  color: rgba(214,208,194,0.22); text-align: center; line-height: 2.4;
+}
+.reveal-line {
+  width: 28px; height: 0.5px;
+  background: rgba(214,208,194,0.18);
+}
+.progress-bar {
+  position: absolute; bottom: 0; left: 0;
+  height: 0.5px; background: rgba(214,208,194,0.15);
+  transition: width 0.9s cubic-bezier(0.23,1,0.32,1);
+  z-index: 3;
+}
+.dot-row {
+  position: absolute; bottom: 18px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 7px; z-index: 3;
+}
+.dot {
+  width: 2px; height: 2px; border-radius: 50%;
+  background: rgba(214,208,194,0.12);
+  transition: background 0.4s, transform 0.4s;
+}
+.dot.on { background: rgba(214,208,194,0.60); transform: scale(1.6); }
+.photo-year-label {
+  position: absolute; top: 22px; right: 24px; z-index: 3;
+  font-family: 'Special Elite', monospace;
+  font-size: 7px; letter-spacing: 0.36em; text-transform: uppercase;
+  color: rgba(214,208,194,0.14);
+}
+/* indicateur navigation photo */
+.nav-hint {
+  position: absolute; bottom: 40px; right: 24px; z-index: 3;
+  font-family: 'Special Elite', monospace;
+  font-size: 6px; letter-spacing: 0.28em;
+  color: rgba(214,208,194,0.10);
+  opacity: 1; transition: opacity 0.4s;
+}
+
+/* ══════════════════════════════
+   CONTACT
+   NOTE : PAS de display:flex ici — la spécificité CSS
+   d'un ID (1,0,0) écraserait .screen { display:none } (0,1,0)
+   et rendrait l'écran toujours visible.
+   On utilise un wrapper interne absolu pour centrer.
+══════════════════════════════ */
+#screen-contact { z-index: 10; }
+
+.contact-inner {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
+}
+.contact-name {
+  font-family: 'Special Elite', monospace;
+  font-style: italic;
+  font-size: clamp(14px, 1.4vw, 20px);
+  letter-spacing: 0.65em;
+  color: rgba(214,208,194,0.62);
+  line-height: 2;
+  text-align: center;
+}
+
+/* ══════════════════════════════
+   MODEL
+   Même règle : pas de display sur l'ID.
+══════════════════════════════ */
+#screen-model { z-index: 10; }
+
+.model-inner {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center;
+  padding: 0 7vw; gap: 5vw;
+}
+.model-photo-slot {
+  width: 33vw; height: 66vh;
+  border: 0.5px solid rgba(214,208,194,0.07);
+  flex-shrink: 0; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.model-photo-slot::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(214,208,194,0.022) 0, rgba(214,208,194,0.022) 1px,
+    transparent 1px, transparent 9px
+  );
+}
+.model-photo-label {
+  font-family: 'Special Elite', monospace;
+  font-size: 7px; letter-spacing: 0.38em;
+  color: rgba(214,208,194,0.12);
+  position: relative; z-index: 1;
+}
+.model-info { flex: 1; display: flex; flex-direction: column; gap: 1.3vh; }
+.model-name-big {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: clamp(50px, 7.5vw, 105px);
+  letter-spacing: 0.05em; line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 0.7px rgba(214,208,194,0.52);
+  display: inline-block;
+  transform: skewX(-7deg);
+}
+.model-agency {
+  font-family: 'Special Elite', monospace;
+  font-size: 7px; letter-spacing: 0.46em; text-transform: uppercase;
+  color: rgba(214,208,194,0.20);
+  margin-top: 0.3vh;
+}
+.model-divider {
+  width: 32px; height: 0.5px;
+  background: rgba(214,208,194,0.10);
+  margin: 0.8vh 0;
+}
+.model-stat {
+  font-family: 'Special Elite', monospace;
+  font-size: 8px; letter-spacing: 0.18em;
+  color: rgba(214,208,194,0.24);
+  padding: 0.6vh 0;
+  border-bottom: 0.5px solid rgba(214,208,194,0.05);
+}
+.model-stat:last-of-type { border-bottom: none; }
+.model-thumbs {
+  display: flex; gap: 1.1vw; margin-top: 1.8vh; align-items: flex-end;
+}
+.model-thumb {
+  width: 7.5vw; height: 10vw;
+  border: 0.5px solid rgba(214,208,194,0.07);
+  flex-shrink: 0; position: relative; overflow: hidden;
+}
+.model-thumb::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    -45deg, rgba(214,208,194,0.018) 0, rgba(214,208,194,0.018) 1px,
+    transparent 1px, transparent 8px
+  );
+}
+.model-thumb:nth-child(2) { transform: rotate(-1.6deg) translateY(4px); }
+.model-thumb:nth-child(3) { transform: rotate( 1.0deg) translateY(-2px); }
+</style>
+</head>
+<body>
+
+<!-- filtre SVG pour distordre les contours des Z (papier / impression dégradée) -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden">
+  <defs>
+    <filter id="paper-z" x="-12%" y="-12%" width="124%" height="124%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.042 0.033"
+                    numOctaves="4" seed="11" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise"
+                         scale="16" xChannelSelector="R" yChannelSelector="G"
+                         result="displaced"/>
+      <feGaussianBlur in="displaced" stdDeviation="1.1"/>
+    </filter>
+  </defs>
+</svg>
+
+<div id="hatch"></div>
+<div id="scanlines"></div>
+<div id="cursor"></div>
+<div id="torch"></div>
+
+<!-- ═══════════════════════════════════
+     HOME — ZZZzz
+═══════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <canvas id="grain-canvas"></canvas>
+
+  <div id="smoke">
+    <div class="smk smk1"></div>
+    <div class="smk smk2"></div>
+    <div class="smk smk3"></div>
+    <div class="smk smk4"></div>
+    <div class="smk smk5"></div>
+    <div class="smk smk6"></div>
+    <div class="smk smk7"></div>
+  </div>
+
+  <canvas id="particle-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></canvas>
+  <div id="z-label-float"></div>
+  <div id="dark-veil"></div>
+  <div id="z-flash"></div>
+
+  <div id="zzz-row">
+    <div class="z-unit z1" data-section="photo">
+      <span class="z-label">Photography</span>
+      <span class="z-glyph">Z</span>
+    </div><div class="z-unit z2" data-section="model">
+      <span class="z-label">Model &middot; Paris</span>
+      <span class="z-glyph">Z</span>
+    </div><div class="z-unit z3" data-section="contact">
+      <span class="z-label">Contact</span>
+      <span class="z-glyph">Z</span>
+    </div><div class="z-unit z4">
+      <span class="z-label">Archive</span>
+      <span class="z-glyph">z</span>
+    </div><div class="z-unit z5">
+      <span class="z-label">About</span>
+      <span class="z-glyph">z</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     ANNÉES
+═══════════════════════════════════ -->
+<div id="screen-years" class="screen">
+  <canvas id="years-canvas"></canvas>
+  <div class="years-inner" id="years-inner">
+    <button class="back-btn" id="back-years">&larr;&nbsp;&nbsp;zzz</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PHOTOS
+═══════════════════════════════════ -->
+<div id="screen-photos" class="screen">
+  <canvas id="photos-canvas"></canvas>
+  <button class="back-btn" id="back-photos">&larr;&nbsp;&nbsp;ann&eacute;es</button>
+  <div class="strip-outer">
+    <div class="strip-inner" id="strip"></div>
+  </div>
+  <div class="dot-row" id="dots"></div>
+  <div class="progress-bar" id="pbar"></div>
+  <div class="photo-year-label" id="photo-year-label"></div>
+</div>
+
+<!-- ═══════════════════════════════════
+     CONTACT
+═══════════════════════════════════ -->
+<div id="screen-contact" class="screen">
+  <canvas id="contact-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0.78;"></canvas>
+  <button class="back-btn" id="back-contact">&larr;&nbsp;&nbsp;zzz</button>
+  <div class="contact-inner">
+    <div class="contact-name">l&eacute;o</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     MODEL
+═══════════════════════════════════ -->
+<div id="screen-model" class="screen">
+  <canvas id="model-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0.78;"></canvas>
+  <button class="back-btn" id="back-model">&larr;&nbsp;&nbsp;zzz</button>
+  <div class="model-inner">
+    <div class="model-photo-slot">
+      <div class="model-photo-label">[ photo ]</div>
+    </div>
+    <div class="model-info">
+      <div class="model-name-big">L&eacute;o</div>
+      <div class="model-agency">Model &middot; Paris Agency</div>
+      <div class="model-divider"></div>
+      <div class="model-stat">Height &middot;&nbsp; &mdash; cm</div>
+      <div class="model-stat">Chest &nbsp;&middot;&nbsp; &mdash; cm</div>
+      <div class="model-stat">Waist &nbsp;&middot;&nbsp; &mdash; cm</div>
+      <div class="model-thumbs">
+        <div class="model-thumb"></div>
+        <div class="model-thumb"></div>
+        <div class="model-thumb"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   ÉTAT GLOBAL
+══════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+
+let mx = -2000, my = -2000;
+let currentScreen = 'home';
+let totalPhotos = 0;
+
+/* ══════════════════════════════════════════════
+   CURSEUR + TORCH
+══════════════════════════════════════════════ */
+const cursorEl  = $('cursor');
+const torchDiv  = $('torch');
+const darkVeil  = $('dark-veil');
+
+function moveTorch(x, y) {
+  torchDiv.style.background =
+    `radial-gradient(circle at ${x}px ${y}px,` +
+    ` rgba(255,218,140,0.38) 0px,` +
+    ` rgba(255,200,110,0.20) 70px,` +
+    ` rgba(220,165,80,0.08)  160px,` +
+    ` transparent 280px)`;
+}
+
+function moveDarkVeil(x, y) {
+  darkVeil.style.background =
+    `radial-gradient(circle at ${x}px ${y}px,` +
+    ` transparent          0px,`  +
+    ` rgba(0,0,0,0.10)    60px,`  +
+    ` rgba(0,0,0,0.70)   180px,`  +
+    ` rgba(0,0,0,0.90)   310px,`  +
+    ` rgba(0,0,0,0.97)   450px)`;
+}
+
+moveTorch(-2000, -2000);
+moveDarkVeil(-2000, -2000);
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursorEl.style.left = mx + 'px';
+  cursorEl.style.top  = my + 'px';
+  moveDarkVeil(mx, my);
+  /* torch géré par flickerLoop — pas d'appel ici */
+});
+
+/* ══════════════════════════════════════════════
+   GRAIN — photocopie dégradée, généré une fois
+══════════════════════════════════════════════ */
+function makeGrain(canvas) {
+  const W = window.innerWidth, H = window.innerHeight;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  const d   = img.data;
+
+  /* ── grain papier : texture fibreuse douce, plage très sombre ── */
+  /* macro-densité : légère variation sans patches durs */
+  const rowV = new Float32Array(H);
+  const colV = new Float32Array(W);
+  for (let y = 0; y < H; y++) {
+    rowV[y] = Math.sin(y * 0.038 + 0.8) * 0.12
+            + Math.sin(y * 0.012       ) * 0.08
+            + 0.50;
+  }
+  for (let x = 0; x < W; x++) {
+    colV[x] = Math.sin(x * 0.028 + 1.4) * 0.10
+            + Math.sin(x * 0.009       ) * 0.06
+            + 0.50;
+  }
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = (y * W + x) * 4;
+      const macro = rowV[y] * colV[x]; /* ~0.36–0.64, variations douces */
+      const fiber = Math.random();     /* grain fin */
+
+      /* 30% macro + 70% grain → texture papier, pas de patches durs */
+      let v = (macro * 0.30 + fiber * 0.70) * 48;
+
+      /* fibre lumineuse rare — pas un artefact glitch */
+      if (Math.random() < 0.0012) v += 28 + Math.random() * 22;
+
+      d[idx] = d[idx+1] = d[idx+2] = Math.min(255, Math.floor(v));
+      d[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  /* vignette bords — bords plus sombres, centre légèrement plus doux */
+  const vg = ctx.createRadialGradient(W/2, H/2, H * 0.20, W/2, H/2, H * 0.85);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.65)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+makeGrain($('grain-canvas'));
+makeGrain($('years-canvas'));
+makeGrain($('photos-canvas'));
+['contact-canvas','model-canvas'].forEach(id => { const c=$(id); if(c) makeGrain(c); });
+
+/* ══════════════════════════════════════════════
+   RAF — animation opacité Z par proximité curseur
+   Z1/Z2/Z3 : 0.18 → 1.0  (interactifs)
+   Z4       : figé à 0.22
+   Z5       : figé à 0.09
+══════════════════════════════════════════════ */
+const zUnits      = Array.from(document.querySelectorAll('.z-unit'));
+const zGlyphs     = zUnits.map(u => u.querySelector('.z-glyph'));
+const zInteract   = zUnits.filter(u => u.dataset.section);
+
+const OPMIN = [0.0, 0.0, 0.0, 0.0,  0.0];
+const OPMAX = [0.86, 0.86, 0.86, 0.46, 0.24];
+const smooth = [0.0, 0.0, 0.0, 0.0, 0.0];
+
+/* ── ignition : flash + pulse au premier contact ── */
+const flashEl        = $('z-flash');
+const zEnteredState  = new Array(5).fill(false);
+let   flashFadeTimer = null;
+
+function triggerIgnite(i) {
+  const r  = zUnits[i].getBoundingClientRect();
+  const cx = r.left + r.width  * 0.5;
+  const cy = r.top  + r.height * 0.5;
+
+  /* burst radial amber depuis le centre du Z */
+  flashEl.style.transition = 'opacity 0.10s ease-in';
+  flashEl.style.background =
+    `radial-gradient(circle at ${cx}px ${cy}px,` +
+    ` rgba(255,225,140,0.22)   0px,`  +
+    ` rgba(240,195, 95,0.10)  80px,`  +
+    ` rgba(210,165, 60,0.04) 200px,`  +
+    ` transparent            360px)`;
+  flashEl.style.opacity = '1';
+
+  clearTimeout(flashFadeTimer);
+  flashFadeTimer = setTimeout(() => {
+    flashEl.style.transition = 'opacity 0.80s ease-out';
+    flashEl.style.opacity    = '0';
+  }, 80);
+
+  /* pulse scale + brightness sur le glyphe */
+  const g = zGlyphs[i];
+  g.classList.remove('igniting');
+  void g.offsetWidth;            /* force reflow pour relancer l'animation */
+  g.classList.add('igniting');
+  g.addEventListener('animationend', () => g.classList.remove('igniting'), { once: true });
+}
+
+/* distance bord-à-bord : 0 quand le curseur est à l'intérieur du Z */
+const R_FULL = 8;     /* px : opacité max dès ce seuil */
+const R_FADE = 140;   /* px : chaque Z n'illumine que son propre espace */
+
+const LABEL_TEXTS = ['Photography', 'Model·Paris', 'Contact', 'Archive', 'About'];
+const labelFloat  = document.getElementById('z-label-float');
+
+function rafLoop() {
+  if (currentScreen === 'home') {
+    let labelShown = false;
+
+    zUnits.forEach((u, i) => {
+      const r  = u.getBoundingClientRect();
+      const dx = Math.max(0, r.left - mx, mx - r.right);
+      const dy = Math.max(0, r.top  - my, my - r.bottom);
+      const d  = Math.hypot(dx, dy);
+      const t  = 1 - Math.min(1, Math.max(0, (d - R_FULL) / (R_FADE - R_FULL)));
+      const tgt = OPMIN[i] + (OPMAX[i] - OPMIN[i]) * t;
+      smooth[i] += (tgt - smooth[i]) * 0.12;
+      zGlyphs[i].style.opacity = smooth[i];
+
+      /* illumination : seulement pour les Z interactifs et proche */
+      if (u.dataset.section) u.classList.toggle('illuminated', d <= 60);
+
+      /* label : tous les Z, uniquement quand curseur est à l'intérieur */
+      if (d === 0 && !labelShown) {
+        const labelTop = Math.max(12, r.top - 30);
+        const labelCx  = r.left + r.width * 0.5;
+        labelFloat.textContent = LABEL_TEXTS[i] || '';
+        labelFloat.style.left  = labelCx  + 'px';
+        labelFloat.style.top   = labelTop + 'px';
+        labelFloat.classList.add('visible');
+        labelShown = true;
+      }
+
+      /* ignition au premier contact */
+      const entered = d <= 20;
+      if (entered && !zEnteredState[i]) triggerIgnite(i);
+      zEnteredState[i] = entered;
+    });
+
+    if (!labelShown) labelFloat.classList.remove('visible');
+  }
+  requestAnimationFrame(rafLoop);
+}
+rafLoop();
+
+/* clics Z interactifs */
+zInteract.forEach(u => u.addEventListener('click', () => {
+  const s = u.dataset.section;
+  if (s === 'photo')   showYears();
+  if (s === 'model')   showModel();
+  if (s === 'contact') showContact();
+}));
+
+/* ══════════════════════════════════════════════
+   FLAMME — scintillement de la torche (bougie)
+══════════════════════════════════════════════ */
+let flickerT = 0;
+function flickerLoop() {
+  flickerT += 0.016;
+  /* superposition de 3 sinus à fréquences différentes = flamme irrégulière */
+  const jitter = Math.sin(flickerT * 2.1) * 9
+               + Math.sin(flickerT * 5.7) * 4
+               + (Math.random() - 0.5)    * 6;
+  const radius = 280 + jitter;
+  const ox = (Math.random() - 0.5) * 3;
+  const oy = (Math.random() - 0.5) * 3;
+  torchDiv.style.background =
+    `radial-gradient(circle at ${mx + ox}px ${my + oy}px,` +
+    ` rgba(255,218,140,0.40) 0px,` +
+    ` rgba(255,200,110,0.21) 70px,` +
+    ` rgba(220,165,80,0.09)  160px,` +
+    ` transparent ${radius}px)`;
+  requestAnimationFrame(flickerLoop);
+}
+flickerLoop();
+
+/* ══════════════════════════════════════════════
+   TRAÎNÉE CURSEUR — 6 points qui s'estompent
+══════════════════════════════════════════════ */
+const TRAIL_LEN = 6;
+const trail = Array.from({ length: TRAIL_LEN }, () => {
+  const d = document.createElement('div');
+  d.style.cssText =
+    'position:fixed;width:2px;height:2px;border-radius:50%;' +
+    'pointer-events:none;z-index:9998;transform:translate(-50%,-50%);' +
+    'background:rgba(224,200,150,0.0);transition:none;';
+  document.body.appendChild(d);
+  return { el: d, x: -200, y: -200 };
+});
+let trailTick = 0;
+function trailLoop() {
+  trailTick++;
+  if (trailTick % 2 === 0) {           /* update every 2 frames */
+    for (let i = TRAIL_LEN - 1; i > 0; i--) {
+      trail[i].x = trail[i-1].x;
+      trail[i].y = trail[i-1].y;
+    }
+    trail[0].x = mx; trail[0].y = my;
+  }
+  trail.forEach((p, i) => {
+    const a = (1 - i / TRAIL_LEN) * 0.22;
+    p.el.style.left = p.x + 'px';
+    p.el.style.top  = p.y + 'px';
+    p.el.style.background = `rgba(224,200,150,${a})`;
+  });
+  requestAnimationFrame(trailLoop);
+}
+trailLoop();
+
+/* ══════════════════════════════════════════════
+   PARTICULES FLOTTANTES — braises / cendres
+══════════════════════════════════════════════ */
+const pcvs  = document.getElementById('particle-canvas');
+pcvs.width  = window.innerWidth;
+pcvs.height = window.innerHeight;
+const pctx  = pcvs.getContext('2d');
+
+const parts = [];
+const MAX_P = 55;
+
+function spawnPart() {
+  parts.push({
+    x:     Math.random() * window.innerWidth,
+    y:     window.innerHeight * (0.4 + Math.random() * 0.6),
+    vx:    (Math.random() - 0.5) * 0.35,
+    vy:    -(0.25 + Math.random() * 0.55),
+    life:  1.0,
+    decay: 0.0015 + Math.random() * 0.0025,
+    r:     0.4 + Math.random() * 1.1,
+    ember: Math.random() > 0.55,
+    wob:   Math.random() * Math.PI * 2,   /* wobble phase */
+  });
+}
+
+function partLoop() {
+  pctx.clearRect(0, 0, pcvs.width, pcvs.height);
+  if (parts.length < MAX_P && Math.random() < 0.18) spawnPart();
+
+  const now = Date.now() * 0.001;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.x   += p.vx + Math.sin(now * 1.3 + p.wob) * 0.18;
+    p.y   += p.vy;
+    p.life -= p.decay;
+    if (p.life <= 0 || p.y < -5) { parts.splice(i, 1); continue; }
+
+    const a = p.life * (p.ember ? 0.28 : 0.18);
+    pctx.beginPath();
+    pctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    pctx.fillStyle = p.ember
+      ? `rgba(210,165,75,${a})`
+      : `rgba(155,145,128,${a})`;
+    pctx.fill();
+  }
+  requestAnimationFrame(partLoop);
+}
+partLoop();
+
+/* ══════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════ */
+function showScreen(id) {
+  /* fade out actuel */
+  const prev = document.querySelector('.screen.active');
+  if (prev) {
+    prev.style.opacity = '0';
+    /* retrait de .active après la transition.
+       On capture prevId pour éviter de retirer l'écran
+       si l'utilisateur y est revenu avant les 560ms. */
+    const prevId = prev.id;
+    setTimeout(() => {
+      if (currentScreen === prevId.replace('screen-', '')) return;
+      prev.classList.remove('active');
+    }, 560);
+  }
+  /* fade in suivant */
+  const next = $(id);
+  next.style.opacity = '0';
+  next.classList.add('active');
+  /* double rAF pour forcer un repaint entre display:block et opacity */
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    next.style.opacity = '1';
+  }));
+  currentScreen = id.replace('screen-', '');
+}
+
+/* ── ANNÉES ── */
+const YEARS = [
+  { label: 'deux mille vingt cinq',   value: 2025, count: 7  },
+  { label: 'deux mille vingt quatre', value: 2024, count: 12 },
+  { label: 'deux mille vingt trois',  value: 2023, count: 8  },
+  { label: 'deux mille vingt deux',   value: 2022, count: 5  },
+];
+
+function showYears() {
+  const inner = $('years-inner');
+  inner.querySelectorAll('.year-item').forEach(e => e.remove());
+  YEARS.forEach((y, i) => {
+    const div = document.createElement('div');
+    div.className = 'year-item';
+    div.innerHTML =
+      `<span class="year-num">0${i+1}</span>` +
+      `<span class="year-text">${y.label}</span>` +
+      `<span class="year-count">${y.count}&thinsp;photos</span>`;
+    div.addEventListener('click', () => showPhotos(y));
+    inner.appendChild(div);
+  });
+  showScreen('screen-years');
+}
+$('back-years').addEventListener('click', () => showScreen('screen-home'));
+
+/* ── PHOTOS ── */
+function seededRNG(seed) {
+  return s => { let x = Math.sin(s * 9301 + seed * 49297) * 233280; return x - Math.floor(x); };
+}
+
+function drawPixelPhoto(canvas, seed) {
+  const W = canvas.offsetWidth  || window.innerWidth;
+  const H = canvas.offsetHeight || window.innerHeight;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const rng = seededRNG(seed);
+
+  ctx.fillStyle = '#040404'; ctx.fillRect(0, 0, W, H);
+
+  /* blocs pixels */
+  let i = 0; const base = 24;
+  for (let y = 0; y < H; y += base) {
+    for (let x = 0; x < W; x += base) {
+      const t  = rng(i++);
+      const v  = Math.floor(4 + t * 58);
+      const ps = base + Math.floor(rng(i++) * 14) - 5;
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(x, y, ps, ps);
+    }
+  }
+
+  /* hachures */
+  ctx.globalAlpha = 0.42;
+  const sp = 7 + rng(seed * 2) * 7;
+  for (let d = -H; d < W + H; d += sp) {
+    ctx.strokeStyle = `rgba(0,0,0,${0.36 + rng(d) * 0.44})`;
+    ctx.lineWidth = 0.5 + rng(d + 1) * 2;
+    ctx.beginPath(); ctx.moveTo(d, 0); ctx.lineTo(d + H, H); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  /* grain */
+  for (let j = 0; j < 800; j++) {
+    ctx.fillStyle = `rgba(215,210,195,${0.01 + rng(j) * 0.048})`;
+    ctx.beginPath();
+    ctx.arc(rng(j*3)*W, rng(j*3+1)*H, rng(j*3+2)*1.3, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function showPhotos(year) {
+  totalPhotos = year.count;
+  $('photo-year-label').textContent = year.label;
+
+  const strip = $('strip'), dots = $('dots');
+  strip.innerHTML = ''; dots.innerHTML = '';
+  strip.style.transform = 'translateX(0)';
+
+  for (let i = 0; i < year.count; i++) {
+    const card = document.createElement('div'); card.className = 'photo-card';
+    const pc   = document.createElement('canvas'); pc.className = 'px-canvas'; card.appendChild(pc);
+    const veil = document.createElement('div'); veil.className = 'reveal-veil';
+    veil.innerHTML =
+      `<div class="reveal-line"></div>` +
+      `<div class="reveal-txt">cliquer pour r&eacute;v&eacute;ler</div>` +
+      `<div class="reveal-line"></div>`;
+    card.appendChild(veil);
+
+    const idx = i;
+    card.addEventListener('click', () => {
+      if (!veil.classList.contains('revealed')) {
+        veil.classList.add('revealed');
+        updateDots(idx);
+        updatePbar(idx);
+      } else {
+        const next = idx + 1;
+        if (next < totalPhotos) {
+          strip.style.transform = `translateX(-${next * 100}vw)`;
+          updateDots(next);
+          updatePbar(next);
+        }
+      }
+    });
+
+    strip.appendChild(card);
+    /* génération différée pour ne pas bloquer le rendu */
+    setTimeout(() => {
+      pc.style.width = '100vw'; pc.style.height = '100vh';
+      drawPixelPhoto(pc, i * 41 + year.value);
+    }, i * 40 + 20);
+
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' on' : '');
+    dots.appendChild(dot);
+  }
+  updatePbar(0);
+  showScreen('screen-photos');
+}
+
+function updateDots(idx) {
+  document.querySelectorAll('#dots .dot').forEach((d, i) =>
+    d.classList.toggle('on', i === idx));
+}
+function updatePbar(idx) {
+  $('pbar').style.width = ((idx + 1) / totalPhotos * 100) + '%';
+}
+$('back-photos').addEventListener('click', showYears);
+
+/* ── CONTACT ── */
+function showContact() { showScreen('screen-contact'); }
+$('back-contact').addEventListener('click', () => showScreen('screen-home'));
+
+/* ── MODEL ── */
+function showModel() { showScreen('screen-model'); }
+$('back-model').addEventListener('click', () => showScreen('screen-home'));
+
+/* ── CLAVIER — ESC revient toujours à home ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && currentScreen !== 'home') showScreen('screen-home');
+});
+
+/* ── RESIZE ── */
+window.addEventListener('resize', () => {
+  ['grain-canvas','years-canvas','photos-canvas','contact-canvas','model-canvas']
+    .forEach(id => { const c=$(id); if(c) makeGrain(c); });
+});
+</script>
+</body>
+</html>
